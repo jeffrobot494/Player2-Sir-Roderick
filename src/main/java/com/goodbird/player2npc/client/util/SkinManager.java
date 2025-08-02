@@ -23,7 +23,8 @@ public class SkinManager {
         }
 
         File cacheFile = ResourceDownloader.getUrlFile(skinUrl, true);
-        ImageDownloadAlt downloader = new ImageDownloadAlt(cacheFile, skinUrl, location, STEVE_SKIN_ID, true, () -> {});
+        ImageDownloadAlt downloader = new ImageDownloadAlt(cacheFile, skinUrl, location, STEVE_SKIN_ID, true, () -> {
+        });
         ResourceDownloader.load(downloader);
 
         return STEVE_SKIN_ID;

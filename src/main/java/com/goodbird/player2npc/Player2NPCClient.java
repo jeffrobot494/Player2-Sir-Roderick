@@ -1,9 +1,9 @@
 package com.goodbird.player2npc;
 
-import com.mojang.blaze3d.platform.InputUtil;
 import com.goodbird.player2npc.client.gui.CharacterSelectionScreen;
 import com.goodbird.player2npc.client.render.RenderAutomaton;
 import com.goodbird.player2npc.network.AutomatonSpawnPacket;
+import com.mojang.blaze3d.platform.InputUtil;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;

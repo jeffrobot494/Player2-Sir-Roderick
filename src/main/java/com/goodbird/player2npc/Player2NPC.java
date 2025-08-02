@@ -13,8 +13,8 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
 import net.minecraft.registry.Registry;
+import net.minecraft.util.Identifier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -47,7 +47,7 @@ public class Player2NPC implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(SPAWN_REQUEST_PACKET_ID, AutomatoneSpawnRequestPacket::handle);
         ServerPlayNetworking.registerGlobalReceiver(DESPAWN_REQUEST_PACKET_ID, AutomatoneDespawnRequestPacket::handle);
 
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server)->{
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             CompanionManager.KEY.get(handler.player).summonAllCompanionsAsync();
         });
     }

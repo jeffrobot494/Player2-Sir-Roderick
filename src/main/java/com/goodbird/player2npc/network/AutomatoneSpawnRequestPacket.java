@@ -49,8 +49,8 @@ public class AutomatoneSpawnRequestPacket implements FabricPacket {
         return TYPE;
     }
 
-    public static void handle(MinecraftServer var1, ServerPlayerEntity var2, ServerPlayNetworkHandler var3, PacketByteBuf var4, PacketSender var5){
+    public static void handle(MinecraftServer var1, ServerPlayerEntity var2, ServerPlayNetworkHandler var3, PacketByteBuf var4, PacketSender var5) {
         AutomatoneSpawnRequestPacket packet = new AutomatoneSpawnRequestPacket(var4);
-        var1.execute(()-> CompanionManager.KEY.get(var2).ensureCompanionExists(packet.character));
+        var1.execute(() -> CompanionManager.KEY.get(var2).ensureCompanionExists(packet.character));
     }
 }

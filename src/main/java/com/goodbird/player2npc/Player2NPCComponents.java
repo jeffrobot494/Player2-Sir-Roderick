@@ -9,12 +9,12 @@ import baritone.api.utils.IInteractionController;
 import baritone.cache.WorldProvider;
 import baritone.selection.SelectionManager;
 import baritone.utils.player.EntityInteractionController;
+import com.goodbird.player2npc.companion.AutomatoneEntity;
+import com.goodbird.player2npc.companion.CompanionManager;
 import dev.onyxstudios.cca.api.v3.entity.EntityComponentFactoryRegistry;
 import dev.onyxstudios.cca.api.v3.entity.EntityComponentInitializer;
 import dev.onyxstudios.cca.api.v3.world.WorldComponentFactoryRegistry;
 import dev.onyxstudios.cca.api.v3.world.WorldComponentInitializer;
-import com.goodbird.player2npc.companion.AutomatoneEntity;
-import com.goodbird.player2npc.companion.CompanionManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 

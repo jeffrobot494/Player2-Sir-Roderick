@@ -36,7 +36,7 @@ public class CharacterCardWidget extends ClickableWidget {
 
         Text nameText = Text.of(character.shortName);
         int textY = this.getY() + 12;
-        graphics.drawCenteredShadowedText(MinecraftClient.getInstance().textRenderer, nameText, this.getX() + this.width/2, textY, 0xFFFFFF);
+        graphics.drawCenteredShadowedText(MinecraftClient.getInstance().textRenderer, nameText, this.getX() + this.width / 2, textY, 0xFFFFFF);
     }
 
     @Override

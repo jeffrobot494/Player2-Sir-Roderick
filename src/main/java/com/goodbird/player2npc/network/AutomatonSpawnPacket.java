@@ -3,8 +3,8 @@ package com.goodbird.player2npc.network;
 import adris.altoclef.player2api.Character;
 import adris.altoclef.player2api.utils.CharacterUtils;
 import baritone.api.entity.LivingEntityInventory;
-import com.goodbird.player2npc.companion.AutomatoneEntity;
 import com.goodbird.player2npc.Player2NPC;
+import com.goodbird.player2npc.companion.AutomatoneEntity;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
@@ -84,7 +84,7 @@ public class AutomatonSpawnPacket implements FabricPacket {
 
         CharacterUtils.writeToBuf(buf, character);
         NbtCompound compound = new NbtCompound();
-        compound.put("inv",inventory.writeNbt(new NbtList()));
+        compound.put("inv", inventory.writeNbt(new NbtList()));
         buf.writeNbt(compound);
     }
 

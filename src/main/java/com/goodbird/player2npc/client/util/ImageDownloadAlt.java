@@ -3,11 +3,6 @@ package com.goodbird.player2npc.client.util;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.texture.NativeImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -17,6 +12,12 @@ import net.minecraft.util.Identifier;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 @Environment(EnvType.CLIENT)
 public class ImageDownloadAlt extends ResourceTexture {
@@ -85,7 +86,7 @@ public class ImageDownloadAlt extends ResourceTexture {
         logger.debug("Downloading http texture from {} to {}", new Object[]{this.imageUrl, this.cacheFile});
 
         try {
-            connection = (HttpURLConnection)(new URL(this.imageUrl)).openConnection();
+            connection = (HttpURLConnection) (new URL(this.imageUrl)).openConnection();
             connection.setDoInput(true);
             connection.setDoOutput(false);
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 5.1; rv:19.0) Gecko/20100101 Firefox/19.0");
@@ -142,8 +143,8 @@ public class ImageDownloadAlt extends ResourceTexture {
     }
 
     private static void setAreaTransparent(NativeImage image, int x, int y, int width, int height) {
-        for(int i = x; i < width; ++i) {
-            for(int j = y; j < height; ++j) {
+        for (int i = x; i < width; ++i) {
+            for (int j = y; j < height; ++j) {
                 int k = image.getPixelColor(i, j);
                 if ((k >> 24 & 255) < 128) {
                     return;
@@ -151,8 +152,8 @@ public class ImageDownloadAlt extends ResourceTexture {
             }
         }
 
-        for(int l = x; l < width; ++l) {
-            for(int i1 = y; i1 < height; ++i1) {
+        for (int l = x; l < width; ++l) {
+            for (int i1 = y; i1 < height; ++i1) {
                 image.setPixelColor(l, i1, image.getPixelColor(l, i1) & 16777215);
             }
         }

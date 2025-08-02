@@ -1,8 +1,8 @@
 package com.goodbird.player2npc.client.render;
 
-import com.goodbird.player2npc.companion.AutomatoneEntity;
 import com.goodbird.player2npc.client.util.ImageDownloadAlt;
 import com.goodbird.player2npc.client.util.ResourceDownloader;
+import com.goodbird.player2npc.companion.AutomatoneEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRendererFactory;
@@ -151,7 +151,8 @@ public class RenderAutomaton extends LivingEntityRenderer<AutomatoneEntity, Play
         TextureManager texturemanager = MinecraftClient.getInstance().getTextureManager();
         AbstractTexture object = texturemanager.getOrDefault(resource, (AbstractTexture) null);
         if (object == null) {
-            ResourceDownloader.load(new ImageDownloadAlt(file, par1Str, resource, DefaultSkinHelper.getTexture(), fix64, () -> {}));
+            ResourceDownloader.load(new ImageDownloadAlt(file, par1Str, resource, DefaultSkinHelper.getTexture(), fix64, () -> {
+            }));
         }
     }
 
