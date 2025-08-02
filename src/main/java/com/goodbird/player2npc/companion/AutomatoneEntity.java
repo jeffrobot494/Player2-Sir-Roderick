@@ -117,6 +117,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         if (!this.getWorld().isClient)
             controller.serverTick();
         super.tick();
+        tickHandSwing();
     }
 
     @Override
