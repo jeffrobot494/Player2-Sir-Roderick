@@ -49,8 +49,10 @@ public class RenderAutomaton extends LivingEntityRenderer<AutomatoneEntity, Play
     }
 
     public void render(AutomatoneEntity automatoneEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
-        this.setModelPose(automatoneEntity);
-        super.render(automatoneEntity, f, g, matrixStack, vertexConsumerProvider, i);
+        try {
+            this.setModelPose(automatoneEntity);
+            super.render(automatoneEntity, f, g, matrixStack, vertexConsumerProvider, i);
+        }catch (Exception ignored){}
     }
 
     public Vec3d getPositionOffset(AutomatoneEntity automatoneEntity, float f) {
