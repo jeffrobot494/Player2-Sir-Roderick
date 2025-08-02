@@ -46,22 +46,23 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
     public AutomatoneEntity(EntityType<? extends AutomatoneEntity> type, World world) {
         super(type, world);
         init();
-        setCharacter(CharacterUtils.requestFirstCharacter());
     }
 
-    public void init(){
+    public void init() {
         this.setStepHeight(0.6f);
         setMovementSpeed(0.4f);
         manager = new LivingEntityInteractionManager(this);
         inventory = new LivingEntityInventory(this);
         hungerManager = new LivingEntityHungerManager();
-        if(!getWorld().isClient) {
+        if (!getWorld().isClient) {
             controller = new AltoClefController(IBaritone.KEY.get(this));
-            controller.getAiBridge().sendGreeting(character);
+            if (character != null) {
+                controller.getAiBridge().sendGreeting(character);
+            }
         }
     }
 
-    public AutomatoneEntity(World world, Character character){
+    public AutomatoneEntity(World world, Character character) {
         super(Player2NPC.AUTOMATONE, world);
         setCharacter(character);
         init();
@@ -86,6 +87,11 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         NbtList nbtList = tag.getList("Inventory", 10);
         this.inventory.readNbt(nbtList);
         this.inventory.selectedSlot = tag.getInt("SelectedItemSlot");
+        if (character == null && tag.contains("character")) {
+            NbtCompound compound = tag.getCompound("character");
+            character = CharacterUtils.readFromNBT(compound);
+            controller.getAiBridge().sendGreeting(character);
+        }
     }
 
     @Override
@@ -94,6 +100,11 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         tag.putFloat("head_yaw", this.headYaw);
         tag.put("Inventory", this.inventory.writeNbt(new NbtList()));
         tag.putInt("SelectedItemSlot", this.inventory.selectedSlot);
+        if (character != null) {
+            NbtCompound compound = new NbtCompound();
+            CharacterUtils.writeToNBT(compound, character);
+            tag.put("character", compound);
+        }
     }
 
     @Override
@@ -103,7 +114,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         inventory.updateItems();
         //hungerManager.update(this);
         lastAttackedTicks++;
-        if(!this.getWorld().isClient)
+        if (!this.getWorld().isClient)
             controller.serverTick();
         super.tick();
     }
@@ -118,10 +129,10 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         pickupItems();
     }
 
-    public void pickupItems(){
+    public void pickupItems() {
         if (!this.getWorld().isClient && this.isAlive() && !this.dead && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
-            Vec3i vec3i  = new Vec3i(1, 0, 1);
-            for(ItemEntity itemEntity : this.getWorld().getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand((double)vec3i.getX(), (double)vec3i.getY(), (double)vec3i.getZ()))) {
+            Vec3i vec3i = new Vec3i(1, 0, 1);
+            for (ItemEntity itemEntity : this.getWorld().getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand((double) vec3i.getX(), (double) vec3i.getY(), (double) vec3i.getZ()))) {
                 if (!itemEntity.isRemoved() && !itemEntity.getStack().isEmpty() && !itemEntity.cannotPickup()) {
                     ItemStack itemStack = itemEntity.getStack();
                     int i = itemStack.getCount();
@@ -140,11 +151,11 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
     @Override
     public boolean tryAttack(Entity target) {
         lastAttackedTicks = 0;
-        float f = (float)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
-        float g = (float)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_KNOCKBACK);
+        float f = (float) this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
+        float g = (float) this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_KNOCKBACK);
         if (target instanceof LivingEntity) {
-            f += EnchantmentHelper.getAttackDamage(this.getMainHandStack(), ((LivingEntity)target).getGroup());
-            g += (float)EnchantmentHelper.getKnockback(this);
+            f += EnchantmentHelper.getAttackDamage(this.getMainHandStack(), ((LivingEntity) target).getGroup());
+            g += (float) EnchantmentHelper.getKnockback(this);
         }
 
         int i = EnchantmentHelper.getFireAspect(this);
@@ -155,8 +166,8 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         boolean bl = target.damage(this.getDamageSources().mobAttack(this), f);
         if (bl) {
             if (g > 0.0F && target instanceof LivingEntity) {
-                ((LivingEntity)target).takeKnockback((double)(g * 0.5F), (double) MathHelper.sin(this.getYaw() * ((float)Math.PI / 180F)), (double)(-MathHelper.cos(this.getYaw() * ((float)Math.PI / 180F))));
-                this.setVelocity(this.getVelocity().multiply(0.6, (double)1.0F, 0.6));
+                ((LivingEntity) target).takeKnockback((double) (g * 0.5F), (double) MathHelper.sin(this.getYaw() * ((float) Math.PI / 180F)), (double) (-MathHelper.cos(this.getYaw() * ((float) Math.PI / 180F))));
+                this.setVelocity(this.getVelocity().multiply(0.6, (double) 1.0F, 0.6));
             }
 
             this.applyDamageEffects(this, target);
@@ -199,7 +210,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
             this.inventory.setStack(this.inventory.selectedSlot, stack);
         } else if (slot == EquipmentSlot.OFFHAND) {
             this.inventory.offHand.set(0, stack);
-        } else if(slot.getType() == EquipmentSlot.Type.ARMOR){
+        } else if (slot.getType() == EquipmentSlot.Type.ARMOR) {
             inventory.armor.set(slot.getEntitySlotId(), stack);
         }
     }
@@ -218,7 +229,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
     }
 
     public Vec3d lerpVelocity(float delta) {
-        return this.lastVelocity.lerp(this.getVelocity(), (double)delta);
+        return this.lastVelocity.lerp(this.getVelocity(), (double) delta);
     }
 
     @Override
@@ -228,7 +239,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
 
     @Override
     public Text getDisplayName() {
-        if(character==null){
+        if (character == null) {
             return super.getDisplayName();
         }
         return Text.literal(character.shortName);
