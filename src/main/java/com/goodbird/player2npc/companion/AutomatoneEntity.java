@@ -132,7 +132,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
 
     public void pickupItems() {
         if (!this.getWorld().isClient && this.isAlive() && !this.dead && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
-            Vec3i vec3i = new Vec3i(1, 0, 1);
+            Vec3i vec3i = new Vec3i(3, 3, 3);
             for (ItemEntity itemEntity : this.getWorld().getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand((double) vec3i.getX(), (double) vec3i.getY(), (double) vec3i.getZ()))) {
                 if (!itemEntity.isRemoved() && !itemEntity.getStack().isEmpty() && !itemEntity.cannotPickup()) {
                     ItemStack itemStack = itemEntity.getStack();
