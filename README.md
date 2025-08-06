@@ -50,6 +50,7 @@ public void init() {
     // And most importantly, connect the "brain"
     if (!getWorld().isClient) {
         controller = new AltoClefController(IBaritone.KEY.get(this));
+        controller.getAiBridge().setPlayer2GameId(PLAYER2_GAME_ID);
         if (character != null) {
             controller.getAiBridge().sendGreeting(character);
         }

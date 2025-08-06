@@ -59,6 +59,9 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
     // Previous motion (used in rendering)
     protected Vec3d lastVelocity;
 
+    // A final field for defining your game id
+    private final String PLAYER2_GAME_ID = "player2-ai-npc-minecraft";
+
     // Standard constructor for entity registering
     public AutomatoneEntity(EntityType<? extends AutomatoneEntity> type, World world) {
         super(type, world);
@@ -77,6 +80,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         if (!getWorld().isClient) {
             // We get the baritone (automatone) instance assigned to this automatone and create the controller
             controller = new AltoClefController(IBaritone.KEY.get(this));
+            controller.getAiBridge().setPlayer2GameId(PLAYER2_GAME_ID); // Setting the game id (for Player2)
             if (character != null) { // If we have a character stored, we initialize the controller with it and make the automatone to greet the player
                 controller.getAiBridge().sendGreeting(character);
             }
