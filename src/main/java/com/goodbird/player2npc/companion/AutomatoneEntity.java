@@ -34,40 +34,63 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 
+/**
+ * We implement:
+ * - IAutomatone for this entity to be counted as an automatone (used for tracking nearby automatons and such)
+ * - IInventoryProvider for this entity to have a player-like inventory
+ * - IInteractionManagerProvider for this entity to have a player-like interaction manager (for breaking and placing blocks and using items)
+ * - IHungerManagerProvider for this entity to have a hunger manager
+ */
 public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInventoryProvider, IInteractionManagerProvider, IHungerManagerProvider {
+    // Fields to store the provided instances of inventory and such
     public LivingEntityInteractionManager manager;
     public LivingEntityInventory inventory;
     public LivingEntityHungerManager hungerManager;
+
+    // Main automatone controller
     public AltoClefController controller;
+
+    // Player2 Character
     public Character character;
+
+    // An identifier of a loading texture (used in rendering)
     public Identifier textureLocation;
+
+    // Previous motion (used in rendering)
     protected Vec3d lastVelocity;
 
+    // Standard constructor for entity registering
     public AutomatoneEntity(EntityType<? extends AutomatoneEntity> type, World world) {
         super(type, world);
         init();
     }
 
     public void init() {
+        // We set its speed and step height
         this.setStepHeight(0.6f);
         setMovementSpeed(0.4f);
+        // Initialize the provided managers and such
         manager = new LivingEntityInteractionManager(this);
         inventory = new LivingEntityInventory(this);
         hungerManager = new LivingEntityHungerManager();
+        // We initialize the altoclef controller ONLY ON CLIENT SIDE!
         if (!getWorld().isClient) {
+            // We get the baritone (automatone) instance assigned to this automatone and create the controller
             controller = new AltoClefController(IBaritone.KEY.get(this));
-            if (character != null) {
+            if (character != null) { // If we have a character stored, we initialize the controller with it and make the automatone to greet the player
                 controller.getAiBridge().sendGreeting(character);
             }
         }
     }
 
+    // Constructor for the manual entity creation
     public AutomatoneEntity(World world, Character character) {
         super(Player2NPC.AUTOMATONE, world);
-        setCharacter(character);
+        setCharacter(character); // If we got a character, we store it
         init();
     }
 
+    // Interface implementation (just make the getters for the managers and the inventory)
     @Override
     public LivingEntityInventory getLivingInventory() {
         return inventory;
@@ -79,6 +102,12 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
     }
 
     @Override
+    public LivingEntityHungerManager getHungerManager() {
+        return hungerManager;
+    }
+
+    // We implement NBT read and write methods
+    @Override
     public void readCustomDataFromNbt(NbtCompound tag) {
         super.readCustomDataFromNbt(tag);
         if (tag.contains("head_yaw")) {
@@ -87,7 +116,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         NbtList nbtList = tag.getList("Inventory", 10);
         this.inventory.readNbt(nbtList);
         this.inventory.selectedSlot = tag.getInt("SelectedItemSlot");
-        if (character == null && tag.contains("character")) {
+        if (character == null && tag.contains("character")) { // If we have a character stored, we read it and initialize the controller with it
             NbtCompound compound = tag.getCompound("character");
             character = CharacterUtils.readFromNBT(compound);
             controller.getAiBridge().sendGreeting(character);
@@ -107,19 +136,21 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         }
     }
 
+    // We tick all the managers and stuff
     @Override
     public void tick() {
-        this.lastVelocity = this.getVelocity();
+        this.lastVelocity = this.getVelocity(); // Setting prev velocity for rendering
         manager.update();
         inventory.updateItems();
-        //hungerManager.update(this);
-        lastAttackedTicks++;
-        if (!this.getWorld().isClient)
+        //hungerManager.update(this); //if you want your automatone to feel hunger - you need to uncomment that
+        lastAttackedTicks++; // Tick this for the NPC to attack (LivingEntities don't do that by default)
+        if (!this.getWorld().isClient) // We tick the controller only on server side
             controller.serverTick();
         super.tick();
-        tickHandSwing();
+        tickHandSwing(); // For arm swing rendering
     }
 
+    // We tweak motion a little bit
     @Override
     public void tickMovement() {
         if (this.isTouchingWater() && this.isSneaking() && this.shouldSwimInFluids()) {
@@ -127,9 +158,10 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         }
         super.tickMovement();
         this.headYaw = this.getYaw();
-        pickupItems();
+        pickupItems(); // And tick the item pickup
     }
 
+    // Pickup all the items in range of 3 blocks
     public void pickupItems() {
         if (!this.getWorld().isClient && this.isAlive() && !this.dead && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
             Vec3i vec3i = new Vec3i(3, 3, 3);
@@ -149,6 +181,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         }
     }
 
+    // Attacking function (LivingEntities don't attack by default)
     @Override
     public boolean tryAttack(Entity target) {
         lastAttackedTicks = 0;
@@ -185,6 +218,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         }
     }
 
+    // Inventory of abstract methods from LivingEntity
     @Override
     public Arm getMainArm() {
         return Arm.RIGHT;
@@ -216,11 +250,7 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         }
     }
 
-    @Override
-    public LivingEntityHungerManager getHungerManager() {
-        return hungerManager;
-    }
-
+    // Useful getters
     public Character getCharacter() {
         return character;
     }
@@ -229,15 +259,18 @@ public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInve
         this.character = character;
     }
 
+    // For rendering
     public Vec3d lerpVelocity(float delta) {
         return this.lastVelocity.lerp(this.getVelocity(), (double) delta);
     }
 
+    // Override the spawning packet
     @Override
     public Packet<ClientPlayPacketListener> createSpawnPacket() {
         return AutomatonSpawnPacket.create(this);
     }
 
+    // Override the name to be taken from the character instance
     @Override
     public Text getDisplayName() {
         if (character == null) {
