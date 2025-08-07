@@ -39,7 +39,7 @@ public class CompanionManager implements Component, ServerTickingComponent {
 
     public void summonAllCompanionsAsync() {
         _needsToSummon = true;
-        CompletableFuture.supplyAsync(CharacterUtils::requestCharacters, _player.getServer())
+        CompletableFuture.supplyAsync(()->CharacterUtils.requestCharacters("player2-ai-npc-minecraft"), _player.getServer())
                 .thenAcceptAsync(characters -> this._assignedCharacters = new ArrayList<>(Arrays.asList(characters)), _player.getServer());
     }
 
