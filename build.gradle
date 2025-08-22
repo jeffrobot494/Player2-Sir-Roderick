@@ -1,6 +1,9 @@
 plugins {
-    id 'fabric-loom' version '1.6-SNAPSHOT'
-    id 'io.github.ladysnake.chenille' version "0.11.3"
+    id 'eclipse'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '6.0.+'
+    id 'org.parchmentmc.librarian.forgegradle' version '1.+'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group project.maven_group
@@ -12,24 +15,37 @@ compileJava {
     options.encoding = "UTF-8"
 }
 
+println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
+
+minecraft {
+    mappings channel: 'parchment', version: '2023.09.03-1.20.1'
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                player2npc {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                player2npc {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+
 repositories {
     mavenCentral()
-
-    chenille.repositories {
-        ladysnake()
-        jamieswhiteshirt()
-    }
-
-    maven {
-        name = 'Quilt Snapshots'
-        url = 'https://maven.quiltmc.org/repository/snapshot'
-    }
-
-    maven {
-        url = "https://maven.quiltmc.org/repository/release/"
-    }
-
-    mavenLocal()
 
     flatDir {
         dir 'libs'
@@ -37,21 +53,8 @@ repositories {
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings "org.quiltmc:quilt-mappings:${minecraft_version}+build.${quilt_mappings}:intermediary-v2"
-    modImplementation "net.fabricmc:fabric-loader:0.15.6"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.1+1.20.1"
-    modImplementation "libs:PlayerEngine:+"
-    implementation 'com.google.code.findbugs:jsr305:3.0.2'
-    modImplementation("dev.onyxstudios.cardinal-components-api:cardinal-components-base:${cca_version}") {
-        transitive = false
-    }
-    modImplementation("dev.onyxstudios.cardinal-components-api:cardinal-components-entity:${cca_version}") {
-        transitive = false
-    }
-    modImplementation("dev.onyxstudios.cardinal-components-api:cardinal-components-world:${cca_version}") {
-        transitive = false
-    }
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    implementation fg.deobf("libs:PlayerEngine-Forge:+")
 }
 
 java {

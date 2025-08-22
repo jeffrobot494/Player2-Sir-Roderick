@@ -1,8 +1,8 @@
 package com.goodbird.player2npc.companion;
 
-import adris.altoclef.AltoClefController;
-import adris.altoclef.player2api.Character;
-import adris.altoclef.player2api.utils.CharacterUtils;
+import altoclef.AltoClefController;
+import altoclef.player2api.Character;
+import altoclef.player2api.utils.CharacterUtils;
 import baritone.api.IBaritone;
 import baritone.api.entity.IAutomatone;
 import baritone.api.entity.IHungerManagerProvider;
@@ -11,275 +11,248 @@ import baritone.api.entity.IInventoryProvider;
 import baritone.api.entity.LivingEntityHungerManager;
 import baritone.api.entity.LivingEntityInteractionManager;
 import baritone.api.entity.LivingEntityInventory;
-import com.goodbird.player2npc.Player2NPC;
-import com.goodbird.player2npc.network.AutomatonSpawnPacket;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.text.Text;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
+import com.goodbird.player2npc.Player2NPCForge;
+import net.minecraft.core.Vec3i;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.EquipmentSlot.Type;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.entity.IEntityAdditionalSpawnData;
+import net.minecraftforge.network.NetworkHooks;
 
-/**
- * We implement:
- * - IAutomatone for this entity to be counted as an automatone (used for tracking nearby automatons and such)
- * - IInventoryProvider for this entity to have a player-like inventory
- * - IInteractionManagerProvider for this entity to have a player-like interaction manager (for breaking and placing blocks and using items)
- * - IHungerManagerProvider for this entity to have a hunger manager
- */
-public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInventoryProvider, IInteractionManagerProvider, IHungerManagerProvider {
-    // Fields to store the provided instances of inventory and such
-    public LivingEntityInteractionManager manager;
-    public LivingEntityInventory inventory;
-    public LivingEntityHungerManager hungerManager;
+public class AutomatoneEntity extends LivingEntity implements IAutomatone, IInventoryProvider, IInteractionManagerProvider, IHungerManagerProvider, IEntityAdditionalSpawnData {
+   public LivingEntityInteractionManager manager;
+   public LivingEntityInventory inventory;
+   public LivingEntityHungerManager hungerManager;
+   public AltoClefController controller;
+   public Character character;
+   public ResourceLocation textureLocation;
+   protected Vec3 lastVelocity;
+   private final String PLAYER2_GAME_ID = "player2-ai-npc-minecraft";
 
-    // Main automatone controller
-    public AltoClefController controller;
+   public AutomatoneEntity(EntityType<? extends AutomatoneEntity> type, Level world) {
+      super(type, world);
+      this.init();
+   }
 
-    // Player2 Character
-    public Character character;
+   public void init() {
+      this.setMaxUpStep(0.6F);
+      this.setSpeed(0.4F);
+      this.manager = new LivingEntityInteractionManager(this);
+      this.inventory = new LivingEntityInventory(this);
+      this.hungerManager = new LivingEntityHungerManager();
+      if (!this.level().isClientSide) {
+         this.controller = new AltoClefController((IBaritone)IBaritone.KEY.get(this));
+         this.controller.getAiBridge().setPlayer2GameId("player2-ai-npc-minecraft");
+         if (this.character != null) {
+            this.controller.getAiBridge().sendGreeting(this.character);
+         }
+      }
+   }
 
-    // An identifier of a loading texture (used in rendering)
-    public Identifier textureLocation;
+   public AutomatoneEntity(Level world, Character character) {
+      super(Player2NPCForge.AUTOMATONE.get(), world);
+      this.setCharacter(character);
+      this.init();
+   }
 
-    // Previous motion (used in rendering)
-    protected Vec3d lastVelocity;
+   public LivingEntityInventory getLivingInventory() {
+      return this.inventory;
+   }
 
-    // A final field for defining your game id
-    private final String PLAYER2_GAME_ID = "player2-ai-npc-minecraft";
+   public LivingEntityInteractionManager getInteractionManager() {
+      return this.manager;
+   }
 
-    // Standard constructor for entity registering
-    public AutomatoneEntity(EntityType<? extends AutomatoneEntity> type, World world) {
-        super(type, world);
-        init();
-    }
+   public LivingEntityHungerManager getHungerManager() {
+      return this.hungerManager;
+   }
 
-    public void init() {
-        // We set its speed and step height
-        this.setStepHeight(0.6f);
-        setMovementSpeed(0.4f);
-        // Initialize the provided managers and such
-        manager = new LivingEntityInteractionManager(this);
-        inventory = new LivingEntityInventory(this);
-        hungerManager = new LivingEntityHungerManager();
-        // We initialize the altoclef controller ONLY ON CLIENT SIDE!
-        if (!getWorld().isClient) {
-            // We get the baritone (automatone) instance assigned to this automatone and create the controller
-            controller = new AltoClefController(IBaritone.KEY.get(this));
-            controller.getAiBridge().setPlayer2GameId(PLAYER2_GAME_ID); // Setting the game id (for Player2)
-            if (character != null) { // If we have a character stored, we initialize the controller with it and make the automatone to greet the player
-                controller.getAiBridge().sendGreeting(character);
+   public void readAdditionalSaveData(CompoundTag tag) {
+      super.readAdditionalSaveData(tag);
+      if (tag.contains("head_yaw")) {
+         this.yHeadRot = tag.getFloat("head_yaw");
+      }
+
+      ListTag nbtList = tag.getList("Inventory", 10);
+      this.inventory.readNbt(nbtList);
+      this.inventory.selectedSlot = tag.getInt("SelectedItemSlot");
+      if (this.character == null && tag.contains("character")) {
+         CompoundTag compound = tag.getCompound("character");
+         this.character = CharacterUtils.readFromNBT(compound);
+         this.controller.getAiBridge().sendGreeting(this.character);
+      }
+   }
+
+   public void addAdditionalSaveData(CompoundTag tag) {
+      super.addAdditionalSaveData(tag);
+      tag.putFloat("head_yaw", this.yHeadRot);
+      tag.put("Inventory", this.inventory.writeNbt(new ListTag()));
+      tag.putInt("SelectedItemSlot", this.inventory.selectedSlot);
+      if (this.character != null) {
+         CompoundTag compound = new CompoundTag();
+         CharacterUtils.writeToNBT(compound, this.character);
+         tag.put("character", compound);
+      }
+   }
+
+   public void tick() {
+      this.lastVelocity = this.getDeltaMovement();
+      this.manager.update();
+      this.inventory.updateItems();
+      this.attackStrengthTicker++;
+      if (!this.level().isClientSide) {
+         this.controller.serverTick();
+      }
+
+      super.tick();
+      this.updateSwingTime();
+   }
+
+   public void aiStep() {
+      if (this.isInWater() && this.isShiftKeyDown() && this.isAffectedByFluids()) {
+         this.goDownInWater();
+      }
+
+      super.aiStep();
+      this.yHeadRot = this.getYRot();
+      this.pickupItems();
+   }
+
+   public void pickupItems() {
+      if (!this.level().isClientSide && this.isAlive() && !this.dead && this.level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+         Vec3i vec3i = new Vec3i(3, 3, 3);
+
+         for (ItemEntity itemEntity : this.level()
+            .getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(vec3i.getX(), vec3i.getY(), vec3i.getZ()))) {
+            if (!itemEntity.isRemoved() && !itemEntity.getItem().isEmpty() && !itemEntity.hasPickUpDelay()) {
+               ItemStack itemStack = itemEntity.getItem();
+               int i = itemStack.getCount();
+               if (this.getLivingInventory().insertStack(itemStack)) {
+                  this.take(itemEntity, i);
+                  if (itemStack.isEmpty()) {
+                     itemEntity.discard();
+                     itemStack.setCount(i);
+                  }
+               }
             }
-        }
-    }
+         }
+      }
+   }
 
-    // Constructor for the manual entity creation
-    public AutomatoneEntity(World world, Character character) {
-        super(Player2NPC.AUTOMATONE, world);
-        setCharacter(character); // If we got a character, we store it
-        init();
-    }
+   public boolean doHurtTarget(Entity target) {
+      this.attackStrengthTicker = 0;
+      float f = (float)this.getAttributeValue(Attributes.ATTACK_DAMAGE);
+      float g = (float)this.getAttributeValue(Attributes.ATTACK_KNOCKBACK);
+      if (target instanceof LivingEntity) {
+         f += EnchantmentHelper.getDamageBonus(this.getMainHandItem(), ((LivingEntity)target).getMobType());
+         g += EnchantmentHelper.getKnockbackBonus(this);
+      }
 
-    // Interface implementation (just make the getters for the managers and the inventory)
-    @Override
-    public LivingEntityInventory getLivingInventory() {
-        return inventory;
-    }
+      int i = EnchantmentHelper.getFireAspect(this);
+      if (i > 0) {
+         target.setSecondsOnFire(i * 4);
+      }
 
-    @Override
-    public LivingEntityInteractionManager getInteractionManager() {
-        return manager;
-    }
+      boolean bl = target.hurt(this.damageSources().mobAttack(this), f);
+      if (bl) {
+         if (g > 0.0F && target instanceof LivingEntity) {
+            ((LivingEntity)target)
+               .knockback(g * 0.5F, Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)), -Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)));
+            this.setDeltaMovement(this.getDeltaMovement().multiply(0.6, 1.0, 0.6));
+         }
 
-    @Override
-    public LivingEntityHungerManager getHungerManager() {
-        return hungerManager;
-    }
+         this.doEnchantDamageEffects(this, target);
+         this.setLastHurtMob(target);
+      }
 
-    // We implement NBT read and write methods
-    @Override
-    public void readCustomDataFromNbt(NbtCompound tag) {
-        super.readCustomDataFromNbt(tag);
-        if (tag.contains("head_yaw")) {
-            this.headYaw = tag.getFloat("head_yaw");
-        }
-        NbtList nbtList = tag.getList("Inventory", 10);
-        this.inventory.readNbt(nbtList);
-        this.inventory.selectedSlot = tag.getInt("SelectedItemSlot");
-        if (character == null && tag.contains("character")) { // If we have a character stored, we read it and initialize the controller with it
-            NbtCompound compound = tag.getCompound("character");
-            character = CharacterUtils.readFromNBT(compound);
-            controller.getAiBridge().sendGreeting(character);
-        }
-    }
+      return bl;
+   }
 
-    @Override
-    public void writeCustomDataToNbt(NbtCompound tag) {
-        super.writeCustomDataToNbt(tag);
-        tag.putFloat("head_yaw", this.headYaw);
-        tag.put("Inventory", this.inventory.writeNbt(new NbtList()));
-        tag.putInt("SelectedItemSlot", this.inventory.selectedSlot);
-        if (character != null) {
-            NbtCompound compound = new NbtCompound();
-            CharacterUtils.writeToNBT(compound, character);
-            tag.put("character", compound);
-        }
-    }
+   public void knockback(double strength, double x, double z) {
+      if (this.hurtMarked) {
+         super.knockback(strength, x, z);
+      }
+   }
 
-    // We tick all the managers and stuff
-    @Override
-    public void tick() {
-        this.lastVelocity = this.getVelocity(); // Setting prev velocity for rendering
-        manager.update();
-        inventory.updateItems();
-        //hungerManager.update(this); //if you want your automatone to feel hunger - you need to uncomment that
-        lastAttackedTicks++; // Tick this for the NPC to attack (LivingEntities don't do that by default)
-        if (!this.getWorld().isClient) // We tick the controller only on server side
-            controller.serverTick();
-        super.tick();
-        tickHandSwing(); // For arm swing rendering
-    }
+   public HumanoidArm getMainArm() {
+      return HumanoidArm.RIGHT;
+   }
 
-    // We tweak motion a little bit
-    @Override
-    public void tickMovement() {
-        if (this.isTouchingWater() && this.isSneaking() && this.shouldSwimInFluids()) {
-            this.knockDownwards();
-        }
-        super.tickMovement();
-        this.headYaw = this.getYaw();
-        pickupItems(); // And tick the item pickup
-    }
+   public Iterable<ItemStack> getArmorSlots() {
+      return this.getLivingInventory().armor;
+   }
 
-    // Pickup all the items in range of 3 blocks
-    public void pickupItems() {
-        if (!this.getWorld().isClient && this.isAlive() && !this.dead && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
-            Vec3i vec3i = new Vec3i(3, 3, 3);
-            for (ItemEntity itemEntity : this.getWorld().getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand((double) vec3i.getX(), (double) vec3i.getY(), (double) vec3i.getZ()))) {
-                if (!itemEntity.isRemoved() && !itemEntity.getStack().isEmpty() && !itemEntity.cannotPickup()) {
-                    ItemStack itemStack = itemEntity.getStack();
-                    int i = itemStack.getCount();
-                    if (this.getLivingInventory().insertStack(itemStack)) {
-                        this.sendPickup(itemEntity, i);
-                        if (itemStack.isEmpty()) {
-                            itemEntity.discard();
-                            itemStack.setCount(i);
-                        }
-                    }
-                }
-            }
-        }
-    }
+   public ItemStack getItemBySlot(EquipmentSlot slot) {
+      if (slot == EquipmentSlot.MAINHAND) {
+         return this.inventory.getMainHandStack();
+      } else if (slot == EquipmentSlot.OFFHAND) {
+         return (ItemStack)this.inventory.offHand.get(0);
+      } else {
+         return slot.getType() == Type.ARMOR ? (ItemStack)this.inventory.armor.get(slot.getIndex()) : ItemStack.EMPTY;
+      }
+   }
 
-    // Attacking function (LivingEntities don't attack by default)
-    @Override
-    public boolean tryAttack(Entity target) {
-        lastAttackedTicks = 0;
-        float f = (float) this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
-        float g = (float) this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_KNOCKBACK);
-        if (target instanceof LivingEntity) {
-            f += EnchantmentHelper.getAttackDamage(this.getMainHandStack(), ((LivingEntity) target).getGroup());
-            g += (float) EnchantmentHelper.getKnockback(this);
-        }
+   public void setItemSlot(EquipmentSlot slot, ItemStack stack) {
+      if (slot == EquipmentSlot.MAINHAND) {
+         this.inventory.setItem(this.inventory.selectedSlot, stack);
+      } else if (slot == EquipmentSlot.OFFHAND) {
+         this.inventory.offHand.set(0, stack);
+      } else if (slot.getType() == Type.ARMOR) {
+         this.inventory.armor.set(slot.getIndex(), stack);
+      }
+   }
 
-        int i = EnchantmentHelper.getFireAspect(this);
-        if (i > 0) {
-            target.setOnFireFor(i * 4);
-        }
+   public Character getCharacter() {
+      return this.character;
+   }
 
-        boolean bl = target.damage(this.getDamageSources().mobAttack(this), f);
-        if (bl) {
-            if (g > 0.0F && target instanceof LivingEntity) {
-                ((LivingEntity) target).takeKnockback((double) (g * 0.5F), (double) MathHelper.sin(this.getYaw() * ((float) Math.PI / 180F)), (double) (-MathHelper.cos(this.getYaw() * ((float) Math.PI / 180F))));
-                this.setVelocity(this.getVelocity().multiply(0.6, (double) 1.0F, 0.6));
-            }
+   public void setCharacter(Character character) {
+      this.character = character;
+   }
 
-            this.applyDamageEffects(this, target);
-            this.onAttacking(target);
-        }
+   public Vec3 lerpVelocity(float delta) {
+      return this.lastVelocity.lerp(this.getDeltaMovement(), delta);
+   }
 
-        return bl;
-    }
+   @Override
+   public Packet<ClientGamePacketListener> getAddEntityPacket() {
+      return NetworkHooks.getEntitySpawningPacket(this);
+   }
 
-    @Override
-    public void takeKnockback(double strength, double x, double z) {
-        if (this.velocityModified) {
-            super.takeKnockback(strength, x, z);
-        }
-    }
+   public Component getDisplayName() {
+      return (Component)(this.character == null ? super.getDisplayName() : Component.literal(this.character.shortName));
+   }
 
-    // Inventory of abstract methods from LivingEntity
-    @Override
-    public Arm getMainArm() {
-        return Arm.RIGHT;
-    }
+   @Override
+   public void writeSpawnData(FriendlyByteBuf friendlyByteBuf) {
+      CharacterUtils.writeToBuf(friendlyByteBuf, this.character);
+      CompoundTag compound = new CompoundTag();
+      compound.put("inv", this.inventory.writeNbt(new ListTag()));
+      friendlyByteBuf.writeNbt(compound);
+   }
 
-    @Override
-    public Iterable<ItemStack> getArmorItems() {
-        return getLivingInventory().armor;
-    }
-
-    public ItemStack getEquippedStack(EquipmentSlot slot) {
-        if (slot == EquipmentSlot.MAINHAND) {
-            return this.inventory.getMainHandStack();
-        } else if (slot == EquipmentSlot.OFFHAND) {
-            return this.inventory.offHand.get(0);
-        } else {
-            return slot.getType() == EquipmentSlot.Type.ARMOR ? this.inventory.armor.get(slot.getEntitySlotId()) : ItemStack.EMPTY;
-        }
-    }
-
-    @Override
-    public void equipStack(EquipmentSlot slot, ItemStack stack) {
-        if (slot == EquipmentSlot.MAINHAND) {
-            this.inventory.setStack(this.inventory.selectedSlot, stack);
-        } else if (slot == EquipmentSlot.OFFHAND) {
-            this.inventory.offHand.set(0, stack);
-        } else if (slot.getType() == EquipmentSlot.Type.ARMOR) {
-            inventory.armor.set(slot.getEntitySlotId(), stack);
-        }
-    }
-
-    // Useful getters
-    public Character getCharacter() {
-        return character;
-    }
-
-    public void setCharacter(Character character) {
-        this.character = character;
-    }
-
-    // For rendering
-    public Vec3d lerpVelocity(float delta) {
-        return this.lastVelocity.lerp(this.getVelocity(), (double) delta);
-    }
-
-    // Override the spawning packet
-    @Override
-    public Packet<ClientPlayPacketListener> createSpawnPacket() {
-        return AutomatonSpawnPacket.create(this);
-    }
-
-    // Override the name to be taken from the character instance
-    @Override
-    public Text getDisplayName() {
-        if (character == null) {
-            return super.getDisplayName();
-        }
-        return Text.literal(character.shortName);
-    }
+   @Override
+   public void readSpawnData(FriendlyByteBuf friendlyByteBuf) {
+      this.character = CharacterUtils.readFromBuf(friendlyByteBuf);
+      this.inventory = new LivingEntityInventory(this);
+      this.inventory.readNbt(friendlyByteBuf.readNbt().getList("inv", 10));
+   }
 }

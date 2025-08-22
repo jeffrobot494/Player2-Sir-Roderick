@@ -1,53 +1,45 @@
 package com.goodbird.player2npc.client.gui;
 
-import adris.altoclef.player2api.Character;
+import altoclef.player2api.Character;
 import com.goodbird.player2npc.client.util.SkinManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-
 import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
-public class CharacterCardWidget extends ClickableWidget {
+public class CharacterCardWidget extends AbstractWidget {
+   private final Character character;
+   private final Consumer<Character> onClick;
+   private final int BACKGROUND_COLOR = -15198171;
 
-    private final Character character;
-    private final Consumer<Character> onClick;
-    private final int BACKGROUND_COLOR = 0xFF181825;
+   public CharacterCardWidget(int x, int y, int width, int height, Character character, Consumer<Character> onClick) {
+      super(x, y, width, height, Component.nullToEmpty(character.name));
+      this.character = character;
+      this.onClick = onClick;
+   }
 
-    public CharacterCardWidget(int x, int y, int width, int height, Character character, Consumer<Character> onClick) {
-        super(x, y, width, height, Text.of(character.name));
-        this.character = character;
-        this.onClick = onClick;
-    }
+   protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+      graphics.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -14999732);
+      graphics.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + 30, 553648127);
+      int headSize = this.width - 24;
+      int headX = this.getX() + 12;
+      int headY = this.getY() + 42;
+      ResourceLocation skinId = SkinManager.getSkinIdentifier(this.character.skinURL);
+      SkinManager.renderSkinHead(graphics, headX, headY, headSize, skinId);
+      Component nameText = Component.nullToEmpty(this.character.shortName);
+      int textY = this.getY() + 12;
+      graphics.drawCenteredString(Minecraft.getInstance().font, nameText, this.getX() + this.width / 2, textY, 16777215);
+   }
 
-    @Override
-    protected void drawWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, 0xff1b1f4c);
-        graphics.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + 30, 0x20FFFFFF);
+   public void onClick(double mouseX, double mouseY) {
+      if (this.active && this.visible) {
+         this.onClick.accept(this.character);
+      }
+   }
 
-        int headSize = this.width - 24;
-        int headX = this.getX() + 12;
-        int headY = this.getY() + 42;
-        Identifier skinId = SkinManager.getSkinIdentifier(character.skinURL);
-        SkinManager.renderSkinHead(graphics, headX, headY, headSize, skinId);
-
-        Text nameText = Text.of(character.shortName);
-        int textY = this.getY() + 12;
-        graphics.drawCenteredShadowedText(MinecraftClient.getInstance().textRenderer, nameText, this.getX() + this.width / 2, textY, 0xFFFFFF);
-    }
-
-    @Override
-    public void onClick(double mouseX, double mouseY) {
-        if (this.active && this.visible) {
-            this.onClick.accept(this.character);
-        }
-    }
-
-    @Override
-    protected void updateNarration(NarrationMessageBuilder builder) {
-
-    }
+   protected void updateWidgetNarration(NarrationElementOutput builder) {
+   }
 }

@@ -1,56 +1,44 @@
 package com.goodbird.player2npc.network;
 
-import adris.altoclef.player2api.Character;
-import adris.altoclef.player2api.utils.CharacterUtils;
-import com.goodbird.player2npc.Player2NPC;
-import com.goodbird.player2npc.companion.CompanionManager;
-import io.netty.buffer.Unpooled;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.FabricPacket;
-import net.fabricmc.fabric.api.networking.v1.PacketSender;
-import net.fabricmc.fabric.api.networking.v1.PacketType;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
+import altoclef.player2api.Character;
+import altoclef.player2api.utils.CharacterUtils;
+import com.goodbird.player2npc.capability.CompanionCapability;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkEvent;
 
-public class AutomatoneDespawnRequestPacket implements FabricPacket {
+import java.util.function.Supplier;
 
-    public static final PacketType<AutomatonSpawnPacket> TYPE = PacketType.create(
-            Player2NPC.DESPAWN_REQUEST_PACKET_ID,
-            AutomatonSpawnPacket::new
-    );
+public class AutomatoneDespawnRequestPacket {
+   private final Character character;
 
-    private final Character character;
+   private AutomatoneDespawnRequestPacket(Character character) {
+      this.character = character;
+   }
 
-    private AutomatoneDespawnRequestPacket(Character character) {
-        this.character = character;
-    }
+   public AutomatoneDespawnRequestPacket(FriendlyByteBuf buf) {
+      this.character = CharacterUtils.readFromBuf(buf);
+   }
 
-    public AutomatoneDespawnRequestPacket(PacketByteBuf buf) {
-        this.character = CharacterUtils.readFromBuf(buf);
-    }
+   public void write(FriendlyByteBuf buf) {
+      CharacterUtils.writeToBuf(buf, this.character);
+   }
 
-    public static Packet<ServerPlayPacketListener> create(Character character) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        new AutomatoneDespawnRequestPacket(character).write(buf);
-        return ClientPlayNetworking.createC2SPacket(Player2NPC.DESPAWN_REQUEST_PACKET_ID, buf);
-    }
+   public static void send(Character character) {
+      ForgeNetwork.sendToServer(new AutomatoneDespawnRequestPacket(character));
+   }
 
-    @Override
-    public void write(PacketByteBuf buf) {
-        CharacterUtils.writeToBuf(buf, character);
-    }
-
-    @Override
-    public PacketType<?> getType() {
-        return TYPE;
-    }
-
-    public static void handle(MinecraftServer var1, ServerPlayerEntity var2, ServerPlayNetworkHandler var3, PacketByteBuf var4, PacketSender var5) {
-        AutomatoneDespawnRequestPacket packet = new AutomatoneDespawnRequestPacket(var4);
-        var1.execute(() -> CompanionManager.KEY.get(var2).dismissCompanion(packet.character.name));
-    }
+   public static void handle(AutomatoneDespawnRequestPacket msg, Supplier<NetworkEvent.Context> ctx) {
+      NetworkEvent.Context context = ctx.get();
+      context.enqueueWork(() -> {
+         ServerPlayer player = context.getSender();
+         if (player == null) {
+            return;
+         }
+         player.getCapability(CompanionCapability.INSTANCE).ifPresent(companionManager -> {
+            companionManager.dismissCompanion(msg.character.name);
+         });
+      });
+      context.setPacketHandled(true);
+   }
 }

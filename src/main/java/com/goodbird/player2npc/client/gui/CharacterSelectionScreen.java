@@ -1,84 +1,71 @@
 package com.goodbird.player2npc.client.gui;
 
-import adris.altoclef.player2api.Character;
-import adris.altoclef.player2api.utils.CharacterUtils;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-
+import altoclef.player2api.Character;
+import altoclef.player2api.utils.CharacterUtils;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class CharacterSelectionScreen extends Screen {
+   private Character[] characters = null;
+   private boolean isLoading = true;
 
-    private Character[] characters = null;
-    private boolean isLoading = true;
+   public CharacterSelectionScreen() {
+      super(Component.nullToEmpty("Select a Character"));
+   }
 
-    public CharacterSelectionScreen() {
-        super(Text.of("Select a Character"));
-    }
+   protected void init() {
+      super.init();
+      this.clearWidgets();
+      this.isLoading = true;
+      CompletableFuture.<Character[]>supplyAsync(() -> CharacterUtils.requestCharacters("player2-ai-npc-minecraft")).thenAcceptAsync(result -> {
+         this.characters = result;
+         this.isLoading = false;
+         this.minecraft.execute(this::createCharacterCards);
+      }, this.minecraft);
+   }
 
-    @Override
-    protected void init() {
-        super.init();
-        this.clearChildren();
-        isLoading = true;
+   private void createCharacterCards() {
+      if (this.characters != null && this.characters.length != 0) {
+         int cardWidth = 100;
+         int cardHeight = 130;
+         int padding = 30;
+         int cardsPerRow = Math.max(1, (this.width - padding) / (cardWidth + padding));
+         int totalWidth = cardsPerRow * (cardWidth + padding) - padding;
+         int startX = this.width / 2 - totalWidth / 2;
+         int startY = 70;
+         int currentX = startX;
+         int currentY = startY;
 
-        CompletableFuture.supplyAsync(()->CharacterUtils.requestCharacters("player2-ai-npc-minecraft"))
-                .thenAcceptAsync(result -> {
-                    this.characters = result;
-                    this.isLoading = false;
-
-                    this.client.execute(this::createCharacterCards);
-                }, this.client);
-    }
-
-    private void createCharacterCards() {
-        if (characters == null || characters.length == 0) return;
-
-        int cardWidth = 100;
-        int cardHeight = 130;
-        int padding = 30;
-        int cardsPerRow = Math.max(1, (this.width - padding) / (cardWidth + padding));
-
-        int totalWidth = cardsPerRow * (cardWidth + padding) - padding;
-        int startX = this.width / 2 - totalWidth / 2;
-        int startY = 70;
-
-        int currentX = startX;
-        int currentY = startY;
-
-        for (Character character : characters) {
-            this.addDrawableChild(new CharacterCardWidget(currentX, currentY, cardWidth, cardHeight, character, this::onCharacterClicked));
-
+         for (Character character : this.characters) {
+            this.addRenderableWidget(new CharacterCardWidget(currentX, currentY, cardWidth, cardHeight, character, this::onCharacterClicked));
             currentX += cardWidth + padding;
             if (currentX + cardWidth > startX + totalWidth) {
-                currentX = startX;
-                currentY += cardHeight + padding;
+               currentX = startX;
+               currentY += cardHeight + padding;
             }
-        }
-    }
+         }
+      }
+   }
 
-    private void onCharacterClicked(Character character) {
-        if (this.client != null) {
-            this.client.setScreen(new CharacterDetailScreen(this, character));
-        }
-    }
+   private void onCharacterClicked(Character character) {
+      if (this.minecraft != null) {
+         this.minecraft.setScreen(new CharacterDetailScreen(this, character));
+      }
+   }
 
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        this.renderBackground(graphics);
+   public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+      this.renderBackground(graphics);
+      graphics.drawCenteredString(this.font, "Select a Character", this.width / 2, 20, 16777215);
+      if (this.isLoading) {
+         graphics.drawCenteredString(this.font, "Loading...", this.width / 2, this.height / 2, 11184810);
+      }
 
-        graphics.drawCenteredShadowedText(this.textRenderer, "Select a Character", this.width / 2, 20, 0xFFFFFF);
+      super.render(graphics, mouseX, mouseY, delta);
+   }
 
-        if (isLoading) {
-            graphics.drawCenteredShadowedText(this.textRenderer, "Loading...", this.width / 2, this.height / 2, 0xAAAAAA);
-        }
-
-        super.render(graphics, mouseX, mouseY, delta);
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
+   public boolean isPauseScreen() {
+      return false;
+   }
 }
