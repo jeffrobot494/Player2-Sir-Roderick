@@ -6,12 +6,15 @@ import com.goodbird.player2npc.capability.CompanionProvider;
 import com.goodbird.player2npc.client.ClientSetup;
 import com.goodbird.player2npc.client.gui.CharacterSelectionScreen;
 import com.goodbird.player2npc.companion.CompanionManager;
+
+import altoclef.AltoClefController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.TickEvent.Phase;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -22,6 +25,12 @@ public class ForgeEvents {
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(CompanionCapability.INSTANCE).ifPresent(CompanionManager::summonAllCompanionsAsync);
+        }
+    }
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event){
+        if(event.phase == Phase.END){
+            AltoClefController.staticServerTick(event.getServer());
         }
     }
 
