@@ -9,6 +9,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -17,6 +21,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 public class CompanionManager  {
+   private static final  Logger LOGGER  = LogManager.getLogger();
    private final ServerPlayer _player;
    private final Map<String, UUID> _companionMap = new ConcurrentHashMap<>();
    private List<Character> _assignedCharacters = new ArrayList<>();
@@ -42,16 +47,17 @@ public class CompanionManager  {
             }
          });
          toDismiss.forEach(this::dismissCompanion);
-
-         for (Character character : this._assignedCharacters) {
+         this._assignedCharacters.stream().filter(character -> character != null).forEach(character -> {
+            LOGGER.info("summonCompanions for character={}", character);
             this.ensureCompanionExists(character);
-         }
+         });
 
          this._assignedCharacters.clear();
       }
    }
 
    public void ensureCompanionExists(Character character) {
+      LOGGER.info("ensureCompanionExists for character={}", character);
       if (this._player.level() != null && this._player.getServer() != null) {
          UUID companionUuid = this._companionMap.get(character.name());
          ServerLevel world = this._player.serverLevel();
