@@ -1,6 +1,5 @@
 package com.goodbird.player2npc.event;
 
-import altoclef.player2api.AICommandBridge;
 import com.goodbird.player2npc.Player2NPCForge;
 import com.goodbird.player2npc.capability.CompanionCapability;
 import com.goodbird.player2npc.capability.CompanionProvider;
@@ -44,7 +43,8 @@ public class ForgeEvents {
     public void onClientTick(TickEvent.ClientTickEvent event) {
         long now = System.nanoTime();
         if (now - lastHeartbeatTime > 60_000_000_000L) {
-            AICommandBridge.sendHeartbeat("player2-ai-npc-minecraft");
+            // TODO: fix
+            // AICommandBridge.sendHeartbeat("player2-ai-npc-minecraft");
             lastHeartbeatTime = now;
         }
 

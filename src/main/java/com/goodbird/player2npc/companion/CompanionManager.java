@@ -34,7 +34,7 @@ public class CompanionManager  {
 
    private void summonCompanions() {
       if (!this._assignedCharacters.isEmpty()) {
-         List<String> assignedNames = this._assignedCharacters.stream().map(c -> c.name).toList();
+         List<String> assignedNames = this._assignedCharacters.stream().map(c -> c.name()).toList();
          List<String> toDismiss = new ArrayList<>();
          this._companionMap.forEach((name, uuid) -> {
             if (!assignedNames.contains(name)) {
@@ -53,19 +53,19 @@ public class CompanionManager  {
 
    public void ensureCompanionExists(Character character) {
       if (this._player.level() != null && this._player.getServer() != null) {
-         UUID companionUuid = this._companionMap.get(character.name);
+         UUID companionUuid = this._companionMap.get(character.name());
          ServerLevel world = this._player.serverLevel();
          Entity existingCompanion = companionUuid != null ? world.getEntity(companionUuid) : null;
          BlockPos spawnPos = this._player.blockPosition().offset(this._player.getRandom().nextInt(3) - 1, 1, this._player.getRandom().nextInt(3) - 1);
          if (existingCompanion instanceof AutomatoneEntity && existingCompanion.isAlive()) {
             existingCompanion.teleportToWithTicket(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-            System.out.println("Teleported existing companion: " + character.name + " for player " + this._player.getName().getString());
+            System.out.println("Teleported existing companion: " + character.name() + " for player " + this._player.getName().getString());
          } else {
             AutomatoneEntity newCompanion = new AutomatoneEntity(this._player.level(), character);
             newCompanion.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, this._player.getYRot(), 0.0F);
             world.addFreshEntity(newCompanion);
-            this._companionMap.put(character.name, newCompanion.getUUID());
-            System.out.println("Summoned new companion: " + character.name + " for player " + this._player.getName().getString());
+            this._companionMap.put(character.name(), newCompanion.getUUID());
+            System.out.println("Summoned new companion: " + character.name() + " for player " + this._player.getName().getString());
          }
       }
    }
