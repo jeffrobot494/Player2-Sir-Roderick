@@ -1,6 +1,5 @@
 package com.goodbird.player2npc;
 
-import adris.altoclef.player2api.AICommandBridge;
 import adris.altoclef.player2api.client.ClientHeartbeatManager;
 
 import com.goodbird.player2npc.client.gui.CharacterSelectionScreen;
@@ -33,7 +32,7 @@ public class Player2NPCClient implements ClientModInitializer {
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            ClientHeartbeatManager.tick("player2-ai-npc-minecraft");
+            ClientHeartbeatManager.onClientTick("player2-ai-npc-minecraft");
 
             if (openCharacterScreenKeybind.wasPressed()) {
                 if (client.world != null) {
