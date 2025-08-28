@@ -8,6 +8,7 @@ import com.goodbird.player2npc.client.gui.CharacterSelectionScreen;
 import com.goodbird.player2npc.companion.CompanionManager;
 
 import altoclef.AltoClefController;
+import altoclef.player2api.client.ClientHeartbeatManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -50,12 +51,13 @@ public class ForgeEvents {
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
-        long now = System.nanoTime();
-        if (now - lastHeartbeatTime > 60_000_000_000L) {
-            // TODO: fix
-            // AICommandBridge.sendHeartbeat("player2-ai-npc-minecraft");
-            lastHeartbeatTime = now;
-        }
+        ClientHeartbeatManager.onClientTick("player2-ai-npc-minecraft");
+        // long now = System.nanoTime();
+        // if (now - lastHeartbeatTime > 60_000_000_000L) {
+        //         Minecraft mc = Minecraft.getInstance();
+        //     AICommandBridge.sendHeartbeat("player2-ai-npc-minecraft");
+        //     lastHeartbeatTime = now;
+        // }
 
         if (ClientSetup.openCharacterScreenKeybind.consumeClick()) {
             Minecraft mc = Minecraft.getInstance();
